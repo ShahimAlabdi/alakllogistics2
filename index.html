@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Al-Akl Logistics — Baghdad, Iraq</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #080d18;
+      --bg2: #0e1628;
+      --bg3: #131e35;
+      --gold: #d4af37;
+      --gold2: #f0d060;
+      --blue: #1a56db;
+      --text: #e8eaf0;
+      --muted: #7a8499;
+      --border: rgba(255, 255, 255, 0.07);
+      --success: #10b981;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --glass: rgba(255, 255, 255, 0.03);
+      --radius: 14px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background-image: radial-gradient(ellipse at 10% 60%, rgba(26, 86, 219, .12) 0%, transparent 55%),
+        radial-gradient(ellipse at 90% 20%, rgba(212, 175, 55, .08) 0%, transparent 55%);
+    }
+
+    /* LOADING SCREEN */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    #loading-screen h2 {
+      font-size: 1.5rem;
+      color: var(--gold);
+    }
+
+    #loading-screen p {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 250px;
+      min-width: 250px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 50;
+    }
+
+    .sidebar-logo {
+      padding: 1.8rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(212, 175, 55, .08), transparent);
+    }
+
+    .sidebar-logo .icon {
+      font-size: 2rem;
+      color: var(--gold);
+      margin-bottom: .4rem;
+    }
+
+    .sidebar-logo h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+
+    .sidebar-logo p {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: .2rem;
+    }
+
+    .nav-section {
+      padding: 1rem .8rem .5rem;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .nav-links {
+      list-style: none;
+      padding: 0 .8rem;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      padding: .85rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: .9rem;
+      font-weight: 500;
+      transition: all .25s;
+      margin-bottom: .25rem;
+    }
+
+    .nav-item i {
+      width: 18px;
+      text-align: center;
+      font-size: .92rem;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, .04);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, .18), rgba(212, 175, 55, .04));
+      color: var(--gold);
+      border: 1px solid rgba(212, 175, 55, .25);
+    }
+
+    .sidebar-bottom {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    #logout-btn {
+      display: none;
+      width: 100%;
+      padding: .7rem;
+      background: rgba(239, 68, 68, .1);
+      border: 1px solid rgba(239, 68, 68, .3);
+      color: var(--danger);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: .85rem;
+      font-weight: 600;
+      transition: all .2s;
+    }
+
+    #logout-btn:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+
+    .topbar-left h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .topbar-left p {
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: .4rem 1rem;
+      font-size: .82rem;
+    }
+
+    .user-badge i {
+      color: var(--gold);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 5px;
+    }
+
+    /* PANELS & CARDS */
+    .panel {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .panel h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .panel h3 i {
+      color: var(--gold);
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .grid3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+
+    .grid4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.2rem;
+    }
+
+    .stat-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: transform .3s, border-color .3s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(212, 175, 55, .3);
+    }
+
+    .stat-card .label {
+      font-size: .78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: .5rem;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .stat-card .icon {
+      font-size: 1.6rem;
+      color: var(--gold);
+      margin-bottom: .8rem;
+    }
+
+    .service-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      transition: all .3s;
+    }
+
+    .service-card:hover {
+      border-color: rgba(212, 175, 55, .3);
+      transform: translateY(-6px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
+    }
+
+    .service-card .sicon {
+      font-size: 2.5rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .service-card h3 {
+      font-size: 1rem;
+      margin-bottom: .6rem;
+    }
+
+    .service-card p {
+      font-size: .85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* FORMS */
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: .45rem;
+      font-weight: 500;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: .75rem 1rem;
+      background: rgba(0, 0, 0, .25);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--gold);
+    }
+
+    select option {
+      background: var(--bg2);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: .7rem 1.4rem;
+      border-radius: 9px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: .88rem;
+      transition: all .25s;
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), #b8920f);
+      color: #000;
+    }
+
+    .btn-gold:hover {
+      background: var(--gold2);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(212, 175, 55, .35);
+    }
+
+    .btn-blue {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn-blue:hover {
+      opacity: .9;
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, .09);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, .12);
+      border: 1px solid rgba(239, 68, 68, .3);
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-wa {
+      background: #25d366;
+      color: #fff;
+    }
+
+    .btn-wa:hover {
+      background: #128c7e;
+    }
+
+    .btn-sm {
+      padding: .45rem .9rem;
+      font-size: .8rem;
+    }
+
+    .full {
+      width: 100%;
+    }
+
+    .mt1 {
+      margin-top: .8rem;
+    }
+
+    .mt2 {
+      margin-top: 1.5rem;
+    }
+
+    .mt3 {
+      margin-top: 2rem;
+    }
+
+    .mb1 {
+      margin-bottom: .8rem;
+    }
+
+    .mb2 {
+      margin-bottom: 1.5rem;
+    }
+
+    .gap1 {
+      gap: .8rem;
+    }
+
+    .flex {
+      display: flex;
+      align-items: center;
+    }
+
+    .flex-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .8rem;
+    }
+
+    /* TABLES */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: .8rem;
+    }
+
+    th,
+    td {
+      padding: .85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: .87rem;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 600;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .015);
+    }
+
+    /* BADGES */
+    .badge {
+      padding: .2rem .7rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+
+    .badge-gold {
+      background: rgba(212, 175, 55, .15);
+      color: var(--gold);
+    }
+
+    .badge-blue {
+      background: rgba(26, 86, 219, .15);
+      color: #60a5fa;
+    }
+
+    .badge-green {
+      background: rgba(16, 185, 129, .15);
+      color: var(--success);
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, .15);
+      color: var(--danger);
+    }
+
+    .badge-warn {
+      background: rgba(245, 158, 11, .15);
+      color: var(--warn);
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 3rem 2rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 650px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+    }
+
+    /* LOGIN */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow);
+      animation: popIn .4s cubic-bezier(.175, .885, .32, 1.275);
+    }
+
+    .login-box h2 {
+      font-size: 1.4rem;
+      margin-bottom: .4rem;
+      font-weight: 700;
+    }
+
+    .login-box p {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    /* CALCULATOR */
+    .calc-result {
+      background: linear-gradient(135deg, rgba(16, 185, 129, .08), rgba(16, 185, 129, .02));
+      border: 1px solid rgba(16, 185, 129, .25);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-top: 1.2rem;
+    }
+
+    /* RECEIPT */
+    .receipt {
+      background: #fff;
+      color: #111;
+      padding: 2rem;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .receipt-header {
+      border-bottom: 3px solid #d4af37;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: .4rem 0;
+      border-bottom: 1px dashed #ddd;
+      font-size: .88rem;
+    }
+
+    .receipt-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem 0 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-top: 2px solid #111;
+    }
+
+    /* TOAST */
+    #toasts {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .toast {
+      background: var(--bg2);
+      border: 1px solid var(--gold);
+      border-radius: 10px;
+      padding: .9rem 1.3rem;
+      font-size: .87rem;
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      animation: slideR .3s ease;
+      box-shadow: var(--shadow);
+    }
+
+    /* INNER TABS */
+    .inner-tabs {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .inner-tab {
+      padding: .55rem 1.2rem;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .85rem;
+      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      transition: all .2s;
+    }
+
+    .inner-tab.active {
+      background: rgba(212, 175, 55, .15);
+      border-color: rgba(212, 175, 55, .4);
+      color: var(--gold);
+    }
+
+    /* EXPENSE ITEM */
+    .exp-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .8rem 1rem;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--border);
+      margin-bottom: .5rem;
+    }
+
+    hr.div {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ANIMATIONS */
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(.9)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    @keyframes slideR {
+      from {
+        transform: translateX(120%);
+        opacity: 0
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .fade-up {
+      animation: fadeUp .5s ease;
+    }
+
+    /* SYNC INDICATOR */
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+      margin-right: .4rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <h2>Al-Akl Logistics</h2>
+    <p id="load-msg">Connecting to Firebase...</p>
+  </div>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="app-sidebar" style="display:none">
+    <div class="sidebar-logo">
+      <div class="icon"><i class="fas fa-truck-fast"></i></div>
+      <h2>Al-Akl</h2>
+      <p>Logistics &amp; Delivery — Baghdad</p>
+    </div>
+    <p class="nav-section">Navigation</p>
+    <ul class="nav-links" id="nav-links">
+      <li class="nav-item active" data-tab="public"><i class="fas fa-globe"></i> Public Portal</li>
+      <li class="nav-item" data-tab="client"><i class="fas fa-user-tie"></i> Client Hub</li>
+      <li class="nav-item" data-tab="driver"><i class="fas fa-id-card"></i> Driver Console</li>
+      <li class="nav-item" data-tab="broker"><i class="fas fa-handshake"></i> Broker Center</li>
+      <li class="nav-item" data-tab="subbroker"><i class="fas fa-handshake-angle"></i> Sub-Broker</li>
+      <li class="nav-item" data-tab="management"><i class="fas fa-chart-line"></i> Management</li>
+    </ul>
+    <div class="sidebar-bottom">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem;text-align:center;">
+        <span class="sync-dot"></span>Firebase Connected
+      </div>
+      <button id="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main" id="app-main" style="display:none">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h3 id="page-title">Public Portal</h3>
+        <p id="page-sub">Company Profile &amp; Services</p>
+      </div>
+      <div class="user-badge" id="user-badge" style="display:none">
+        <i class="fas fa-circle-user"></i>
+        <span id="badge-name">Guest</span>
+      </div>
+    </div>
+    <div class="content" id="main-content"></div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toasts"></div>
+  <!-- PRINT AREA -->
+  <div id="print-area" style="display:none;position:fixed;top:-9999px;left:-9999px;width:800px;"></div>
+
+  <script>
+    // =============================================
+    // FIREBASE INIT
+    // =============================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyADNkd6C0DKL406xlyI2YznVkW9iqzEvLk",
+      authDomain: "al-akl.firebaseapp.com",
+      projectId: "al-akl",
+      storageBucket: "al-akl.firebasestorage.app",
+      messagingSenderId: "812475937817",
+      appId: "1:812475937817:web:e59d21eef51a1361076688"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const fdb = firebase.firestore();
+
+    // =============================================
+    // IN-MEMORY CACHE (loaded from Firestore once)
+    // =============================================
+    const AppData = { users: [], trips: [], rates: null };
+
+    const defaultRates = {
+      longHaul: { cbm: 50, kg: 1.5, box: 10 },
+      middleHaul: { cbm: 30, kg: 1.0, box: 7 },
+      shortHaul: { cbm: 20, kg: 0.5, box: 5 },
+      domestic: { cbm: 10, kg: 0.2, box: 2 },
+      fullCarBase: 200, partialCarBase: 50, fullCarThreshold: 15,
+      brokerPct: 10, subBrokerPct: 5
+    };
+
+    const defaultUsers = [
+      { id: 'MGT001', mobile: 'management', password: 'admin123', role: 'management', name: 'Mohammed Thabit', createdAt: new Date().toISOString() },
+      { id: 'DRV001', mobile: '07700000001', password: 'admin', role: 'driver', name: 'Ali Hassan', createdAt: new Date().toISOString() },
+      { id: 'BRK001', mobile: '07700000002', password: 'admin', role: 'broker', name: 'Broker Ahmed', commissionPct: 10, clientIds: [], createdAt: new Date().toISOString() },
+      { id: 'SBRK001', mobile: '07700000003', password: 'admin', role: 'subbroker', name: 'SubBroker Kareem', commissionPct: 5, parentBrokerId: 'BRK001', clientIds: [], createdAt: new Date().toISOString() }
+    ];
+
+    async function loadAppData() {
+      setLoadMsg('Loading configuration...');
+      // Rates
+      const ratesDoc = await fdb.collection('config').doc('rates').get();
+      if (ratesDoc.exists) {
+        AppData.rates = ratesDoc.data();
+      } else {
+        await fdb.collection('config').doc('rates').set(defaultRates);
+        AppData.rates = { ...defaultRates };
+      }
+
+      setLoadMsg('Loading users...');
+      // Users
+      const usersSnap = await fdb.collection('users').get();
+      AppData.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (AppData.users.length === 0) {
+        setLoadMsg('Setting up default accounts...');
+        const batch = fdb.batch();
+        defaultUsers.forEach(u => {
+          const ref = fdb.collection('users').doc(u.id);
+          batch.set(ref, u);
+        });
+        await batch.commit();
+        AppData.users = [...defaultUsers];
+      }
+
+      setLoadMsg('Loading trips...');
+      // Trips
+      const tripsSnap = await fdb.collection('trips').orderBy('createdAt', 'desc').get();
+      AppData.trips = tripsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    function setLoadMsg(msg) {
+      document.getElementById('load-msg').textContent = msg;
+    }
+
+    // =============================================
+    // DB LAYER (memory + Firestore sync)
+    // =============================================
+    const DB = {
+      getRates() { return AppData.rates; },
+      setRates(r) {
+        AppData.rates = r;
+        fdb.collection('config').doc('rates').set(r);
+      },
+      getUsers() { return AppData.users; },
+      getUser(mobile, password) {
+        return AppData.users.find(u => u.mobile === mobile && u.password === password) || null;
+      },
+      registerClient(mobile, password, name) {
+        if (AppData.users.find(u => u.mobile === mobile)) return null;
+        const user = { id: 'CLI_' + Date.now(), mobile, password, role: 'client', name, savedReceivers: [], createdAt: new Date().toISOString() };
+        AppData.users.push(user);
+        fdb.collection('users').doc(user.id).set(user);
+        return user;
+      },
+      updateUser(user) {
+        const idx = AppData.users.findIndex(u => u.id === user.id);
+        if (idx > -1) { AppData.users[idx] = user; fdb.collection('users').doc(user.id).set(user); }
+      },
+      getTrips() { return AppData.trips; },
+      getTripsByClient(cid) { return AppData.trips.filter(t => t.clientId === cid); },
+      createTrip(data) {
+        const trip = { id: 'TRP' + Date.now().toString(36).toUpperCase(), createdAt: new Date().toISOString(), status: 'Pending', expenses: [], ...data };
+        AppData.trips.unshift(trip);
+        fdb.collection('trips').doc(trip.id).set(trip);
+        return trip;
+      },
+      updateTrip(trip) {
+        const idx = AppData.trips.findIndex(t => t.id === trip.id);
+        if (idx > -1) { AppData.trips[idx] = trip; fdb.collection('trips').doc(trip.id).set(trip); }
+      }
+    };
+
+    // =============================================
+    // SESSION
+    // =============================================
+    let currentUser = null;
+    function setSession(user) { currentUser = user; }
+    function clearSession() { currentUser = null; }
+
+    // =============================================
+    // ROUTER
+    // =============================================
+    const tabTitles = {
+      public: ['Public Portal', 'Company Profile & Services'],
+      client: ['Client Hub', 'Book Shipments & Track History'],
+      driver: ['Driver Console', 'Trips, Expenses & Load Verifier'],
+      broker: ['Broker Center', 'Commission Tracking & Client History'],
+      subbroker: ['Sub-Broker Panel', 'Extended Network Yield'],
+      management: ['Management Dashboard', 'Rates, Trips, Brokers & Full Control']
+    };
+
+    function switchTab(name) {
+      const guarded = ['client', 'driver', 'broker', 'subbroker', 'management'];
+      if (guarded.includes(name)) {
+        if (!currentUser) { showLogin(name); return; }
+        const role = currentUser.role;
+        if (name === 'client' && role !== 'client' && role !== 'management') { toast('Not a client account', 'danger'); return; }
+        if (name === 'driver' && role !== 'driver' && role !== 'management') { toast('Not a driver account', 'danger'); return; }
+        if (name === 'broker' && role !== 'broker' && role !== 'management') { toast('Not a broker account', 'danger'); return; }
+        if (name === 'subbroker' && role !== 'subbroker' && role !== 'management') { toast('Not a sub-broker account', 'danger'); return; }
+        if (name === 'management' && role !== 'management') { toast('Management access only', 'danger'); return; }
+      }
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
+      const [title, sub] = tabTitles[name] || ['', ''];
+      document.getElementById('page-title').textContent = title;
+      document.getElementById('page-sub').textContent = sub;
+      const mc = document.getElementById('main-content');
+      mc.innerHTML = '';
+      mc.className = 'content fade-up';
+      renders[name]();
+      updateBadge();
+    }
+
+    document.querySelectorAll('.nav-item').forEach(el => el.addEventListener('click', () => switchTab(el.dataset.tab)));
+
+    function updateBadge() {
+      const badge = document.getElementById('user-badge');
+      if (currentUser) {
+        badge.style.display = 'flex';
+        document.getElementById('badge-name').textContent = currentUser.name + ' (' + currentUser.role + ')';
+        document.getElementById('logout-btn').style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'none';
+      }
+    }
+
+    function logout() {
+      clearSession();
+      toast('Logged out successfully');
+      switchTab('public');
+    }
+
+    // =============================================
+    // LOGIN MODAL
+    // =============================================
+    function showLogin(tabName) {
+      const isClient = tabName === 'client';
+      const overlay = document.createElement('div');
+      overlay.className = 'login-overlay';
+      overlay.id = 'login-overlay';
+      overlay.innerHTML = `
+    <div class="login-box">
+      <h2><i class="fas fa-lock" style="color:var(--gold)"></i> Secure Access</h2>
+      <p>${isClient ? 'Login to your account or register as a new client' : 'Login with your credentials'}</p>
+      <div class="form-group"><label>Mobile / Username</label>
+        <input id="l-mobile" type="text" placeholder="${tabName === 'management' ? 'management' : '07XXXXXXXXX'}">
+      </div>
+      <div class="form-group"><label>Password</label>
+        <input id="l-pass" type="password" placeholder="Your password">
+      </div>
+      <div id="reg-extra" style="display:none">
+        <div class="form-group"><label>Full Name</label><input id="l-name" placeholder="Your full name"></div>
+      </div>
+      <button class="btn btn-gold full" onclick="doLogin('${tabName}')"><i class="fas fa-sign-in-alt"></i> Login</button>
+      ${isClient ? `<p style="text-align:center;margin-top:1rem;font-size:.82rem;color:var(--muted)">
+        New here? <a href="#" onclick="document.getElementById('reg-extra').style.display='block';this.parentElement.style.display='none'" style="color:var(--gold)">Register</a></p>`: ''}
+      <button onclick="document.getElementById('login-overlay').remove()" 
+        style="margin-top:1rem;width:100%;background:none;border:none;color:var(--muted);cursor:pointer;font-family:Outfit;font-size:.85rem">
+        Cancel</button>
+    </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function doLogin(tabName) {
+      const mobile = document.getElementById('l-mobile').value.trim();
+      const pass = document.getElementById('l-pass').value.trim();
+      const nameEl = document.getElementById('l-name');
+      if (!mobile || !pass) { toast('Fill all required fields', 'warn'); return; }
+
+      // Registration flow
+      if (nameEl && document.getElementById('reg-extra').style.display !== 'none') {
+        const name = nameEl.value.trim();
+        if (!name) { toast('Enter your name', 'warn'); return; }
+        const user = DB.registerClient(mobile, pass, name);
+        if (!user) { toast('Mobile number already registered', 'danger'); return; }
+        setSession(user);
+        document.getElementById('login-overlay').remove();
+        toast('Welcome, ' + user.name + '! Account saved to cloud ☁️', 'success');
+        switchTab(tabName);
+        return;
+      }
+
+      const user = DB.getUser(mobile, pass);
+      if (!user) { toast('Invalid credentials', 'danger'); return; }
+      if (tabName === 'client' && user.role !== 'client' && user.role !== 'management') { toast('Not a client account', 'danger'); return; }
+      if (tabName === 'driver' && user.role !== 'driver' && user.role !== 'management') { toast('Not a driver account', 'danger'); return; }
+      if (tabName === 'broker' && user.role !== 'broker' && user.role !== 'management') { toast('Not a broker account', 'danger'); return; }
+      if (tabName === 'subbroker' && user.role !== 'subbroker' && user.role !== 'management') { toast('Not a sub-broker account', 'danger'); return; }
+      if (tabName === 'management' && user.role !== 'management') { toast('Management only', 'danger'); return; }
+
+      setSession(user);
+      document.getElementById('login-overlay').remove();
+      toast('Welcome back, ' + user.name + '!', 'success');
+      switchTab(tabName);
+    }
+
+    // =============================================
+    // TOAST
+    // =============================================
+    function toast(msg, type = 'info') {
+      const icons = { info: 'fa-info-circle', success: 'fa-check-circle', danger: 'fa-times-circle', warn: 'fa-triangle-exclamation' };
+      const c = { info: '#d4af37', success: '#10b981', danger: '#ef4444', warn: '#f59e0b' };
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.style.borderColor = c[type] || c.info;
+      t.innerHTML = `<i class="fas ${icons[type]}" style="color:${c[type]}"></i> ${msg}`;
+      document.getElementById('toasts').appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3500);
+    }
+
+    // =============================================
+    // CALCULATOR ENGINE
+    // =============================================
+    function calcShipping(len, wid, hei, qty, weightKg, zone) {
+      const rates = DB.getRates();
+      const zr = rates[zone] || rates.domestic;
+      const totalCbm = parseFloat(((len * wid * hei / 1e6) * qty).toFixed(4));
+      const byVol = totalCbm * zr.cbm;
+      const byWt = weightKg * zr.kg;
+      const byBox = qty * zr.box;
+      let highest = Math.max(byVol, byWt, byBox);
+      let method = byVol >= byWt && byVol >= byBox ? 'Volume (CBM)' : byWt >= byBox ? 'Weight (kg)' : 'Flat Box Rate';
+      let carType = 'Partial Car';
+      if (totalCbm > rates.fullCarThreshold && totalCbm > 0) {
+        carType = 'Full Car';
+        highest += rates.fullCarBase;
+      } else {
+        highest += rates.partialCarBase;
+      }
+      return { totalCbm, cost: parseFloat(highest.toFixed(2)), method, carType };
+    }
+
+    function calcWidget(showMoney = true) {
+      return `<div class="panel">
+    <h3><i class="fas fa-calculator"></i> ${showMoney ? 'Shipping Cost Calculator' : 'Load Size Verifier'}</h3>
+    ${!showMoney ? '<p style="font-size:.82rem;color:var(--muted);margin-top:-.5rem;margin-bottom:1rem">Geometry only — prices not shown</p>' : ''}
+    <div class="grid2">
+      <div class="form-group"><label>Shipping Zone</label>
+        <select id="c-zone">
+          <option value="domestic">Domestic (Inside Baghdad)</option>
+          <option value="shortHaul">Short Haul (Babil, Diyala, Wasit…)</option>
+          <option value="middleHaul">Middle Haul (Najaf, Karbala, Babylon…)</option>
+          <option value="longHaul">Long Haul (Basra, Mosul, Erbil…)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Total Weight (kg)</label><input type="number" id="c-wt" value="0" min="0"></div>
+    </div>
+    <div style="margin-bottom:.8rem;font-size:.85rem;color:var(--muted)">Box Dimensions (in cm)</div>
+    <div class="grid4">
+      <div class="form-group"><label>Length (cm)</label><input type="number" id="c-l" value="0" min="0"></div>
+      <div class="form-group"><label>Width (cm)</label><input type="number" id="c-w" value="0" min="0"></div>
+      <div class="form-group"><label>Height (cm)</label><input type="number" id="c-h" value="0" min="0"></div>
+      <div class="form-group"><label>No. of Boxes</label><input type="number" id="c-q" value="1" min="1"></div>
+    </div>
+    <button class="btn btn-gold" onclick="runCalc(${showMoney})"><i class="fas fa-calculator"></i> Calculate</button>
+    <div id="calc-out" style="margin-top:1rem"></div>
+  </div>`;
+    }
+
+    function runCalc(showMoney) {
+      const l = +document.getElementById('c-l').value || 0;
+      const w = +document.getElementById('c-w').value || 0;
+      const h = +document.getElementById('c-h').value || 0;
+      const q = +document.getElementById('c-q').value || 1;
+      const wt = +document.getElementById('c-wt').value || 0;
+      const zone = document.getElementById('c-zone').value;
+      const r = calcShipping(l, w, h, q, wt, zone);
+      const zoneLbl = document.getElementById('c-zone').selectedOptions[0].text.split(' (')[0];
+      let html = `<div class="calc-result">
+    <div class="flex gap1" style="margin-bottom:.8rem">
+      <span class="badge badge-blue">${zoneLbl}</span>
+      <span class="badge badge-gold">${r.carType}</span>
+      <span class="badge badge-green">Via: ${r.method}</span>
+    </div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.2rem">Total Volume</div>
+    <div style="font-size:2rem;font-weight:700;color:var(--gold)">${r.totalCbm} m³</div>`;
+      if (showMoney) {
+        html += `<hr class="div" style="margin:.8rem 0">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.2rem">Total Shipment Cost</div>
+    <div style="font-size:2.5rem;font-weight:800;color:var(--success)">$${r.cost}</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem">Best rate auto-selected from all 3 pricing methods</div>`;
+      }
+      html += `</div>`;
+      document.getElementById('calc-out').innerHTML = html;
+    }
+    let lastCalc = null;
+
+    // =============================================
+    // PDF & PRINT
+    // =============================================
+    function generatePDF(trip) {
+      const pa = document.getElementById('print-area');
+      const zl = { domestic: 'Domestic (Baghdad)', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      pa.innerHTML = `<div class="receipt">
+    <div class="receipt-header"><h2>🚛 Al-Akl Logistics</h2>
+      <p style="color:#777">Baghdad, Iraq | Building Materials & Industrial Logistics</p>
+      <p style="margin-top:.5rem;font-weight:600">Booking Confirmation</p></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div><strong>Ref:</strong> ${trip.id}<br><strong>Date:</strong> ${new Date(trip.createdAt).toLocaleString()}<br><strong>Status:</strong> ${trip.status}</div>
+      <div><strong>Zone:</strong> ${zl[trip.zone] || trip.zone}<br><strong>Car:</strong> ${trip.carType}<br><strong>Priced Via:</strong> ${trip.method}</div>
+    </div>
+    <div class="receipt-row"><span>Sender</span><span>${trip.senderName}</span></div>
+    <div class="receipt-row"><span>Sender Mobile</span><span>${trip.senderMobile || '-'}</span></div>
+    <div class="receipt-row"><span>Receiver</span><span>${trip.receiverName}</span></div>
+    <div class="receipt-row"><span>City</span><span>${trip.receiverCity}</span></div>
+    <div class="receipt-row"><span>Receiver Mobile</span><span>${trip.receiverMobile || '-'}</span></div>
+    <div class="receipt-row"><span>Volume</span><span>${trip.totalCbm} m³</span></div>
+    <div class="receipt-row"><span>Weight</span><span>${trip.weightKg} kg</span></div>
+    <div class="receipt-row"><span>Boxes</span><span>${trip.boxes}</span></div>
+    <div class="receipt-total"><span>TOTAL COST</span><span>$${trip.cost}</span></div>
+    <div style="margin-top:1.5rem;padding:.8rem;background:#f9f9f9;border-radius:6px;font-size:.78rem;color:#555;text-align:center">
+      Payment due on delivery. For inquiries: WhatsApp +964 770 000 0000<br>
+      Generated by Al-Akl Cloud Logistics System</div>
+  </div>`;
+      pa.style.display = 'block';
+      html2pdf().set({
+        margin: .5, filename: `AlAkl_${trip.id}.pdf`,
+        image: { type: 'jpeg', quality: .98 }, html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      }).from(pa).save().then(() => pa.style.display = 'none');
+    }
+
+    function printReceipt(trip) {
+      const pa = document.getElementById('print-area');
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      pa.innerHTML = `<div class="receipt">
+    <h2>Al-Akl Logistics — Ref: ${trip.id}</h2>
+    <p>${new Date(trip.createdAt).toLocaleString()} | ${zl[trip.zone]} | ${trip.carType}</p>
+    <hr><p><b>From:</b> ${trip.senderName} (${trip.senderMobile || ''})</p>
+    <p><b>To:</b> ${trip.receiverName} — ${trip.receiverCity} (${trip.receiverMobile || ''})</p>
+    <p><b>Volume:</b> ${trip.totalCbm} m³ | <b>Weight:</b> ${trip.weightKg} kg | <b>Boxes:</b> ${trip.boxes}</p>
+    <hr><h3>Total: $${trip.cost}</h3>
+  </div>`;
+      pa.style.display = 'block';
+      setTimeout(() => { window.print(); pa.style.display = 'none'; }, 300);
+    }
+
+    function waLink(trip) {
+      const text = encodeURIComponent(`Hello Al-Akl!\nBooking Ref: ${trip.id}\nFrom: ${trip.senderName}\nTo: ${trip.receiverName} (${trip.receiverCity})\nVolume: ${trip.totalCbm} m³\nTotal: $${trip.cost}\nDate: ${new Date(trip.createdAt).toLocaleDateString()}`);
+      window.open(`https://wa.me/9647700000000?text=${text}`, '_blank');
+    }
+
+    // =============================================
+    // RENDERS
+    // =============================================
+    const renders = {};
+
+    // ---- PUBLIC ----
+    renders.public = function () {
+      document.getElementById('main-content').innerHTML = `
+  <div class="hero fade-up">
+    <h1>Al-Akl Logistics</h1>
+    <p>Iraq's premier specialists in transporting building materials, heavy tools, and industrial tanks from Baghdad to every province — reliably, safely, and efficiently.</p>
+    <div class="flex-wrap" style="justify-content:center">
+      <button class="btn btn-gold" onclick="switchTab('client')"><i class="fas fa-box-open"></i> Book a Shipment</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})"><i class="fas fa-info-circle"></i> About Us</button>
+    </div>
+  </div>
+  <div class="grid3 mb2">
+    <div class="service-card"><div class="sicon"><i class="fas fa-helmet-safety"></i></div><h3>Building Materials</h3><p>Cement, steel rebar, bricks, tiles, and construction essentials transported with precision.</p></div>
+    <div class="service-card"><div class="sicon"><i class="fas fa-toolbox"></i></div><h3>Heavy Tools & Equipment</h3><p>Industrial generators, compressors, cranes, and site equipment — delivered door to door.</p></div>
+    <div class="service-card"><div class="sicon"><i class="fas fa-jug-water"></i></div><h3>Water Tanks & Vessels</h3><p>Bulk shipment of large water tanks, storage vessels, and fiberglass containers.</p></div>
+  </div>
+  <div class="grid2 mb2">
+    <div class="panel"><h3><i class="fas fa-route"></i> Nationwide Coverage</h3>
+      <p style="color:var(--muted);line-height:1.8;font-size:.9rem">From our Baghdad hub we deliver across all Iraqi provinces:<br>
+      <span style="color:var(--text)">Basra • Mosul • Erbil • Najaf • Karbala • Kirkuk • Anbar • Diyala • Babil • Wasit • Dhi Qar • Muthanna • Qadisiyyah • Maysan • Saladin • Duhok • Sulaymaniyah</span></p>
+    </div>
+    <div class="panel"><h3><i class="fas fa-shield-halved"></i> Why Choose Us</h3>
+      <ul style="color:var(--muted);line-height:2;font-size:.9rem;padding-left:1.2rem">
+        <li>Smart volume/weight/box pricing — best rate always selected</li>
+        <li>Full Car & Partial Car load options</li>
+        <li>Real-time cloud-synced booking confirmations</li>
+        <li>PDF receipts &amp; WhatsApp confirmations</li>
+        <li>Trusted broker network with live commission tracking</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel" id="about">
+    <h3><i class="fas fa-building"></i> About Al-Akl Logistics</h3>
+    <p style="color:var(--muted);line-height:1.8;font-size:.9rem;max-width:700px">Founded in Baghdad, Al-Akl Logistics was built to solve a critical gap in Iraq's construction supply chain. Our main trader clients rely on us to move large volumes of materials from central Baghdad warehouses to agent shops across every province. Our smart pricing system gives clients instant transparent quotes with no hidden fees.</p>
+    <div class="grid3 mt2">
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:800;color:var(--gold)">${DB.getTrips().length}</div><div style="color:var(--muted);font-size:.85rem">Trips Recorded</div></div>
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:800;color:var(--gold)">18</div><div style="color:var(--muted);font-size:.85rem">Provinces Served</div></div>
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:800;color:var(--gold)">100%</div><div style="color:var(--muted);font-size:.85rem">Cloud-Backed</div></div>
+    </div>
+  </div>`;
+    };
+
+    // ---- CLIENT ----
+    renders.client = function () {
+      document.getElementById('main-content').innerHTML = `
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="clientSub('book',this)"><i class="fas fa-box-open"></i> Book Shipment</button>
+    <button class="inner-tab" onclick="clientSub('calc',this)"><i class="fas fa-calculator"></i> Price Calculator</button>
+    <button class="inner-tab" onclick="clientSub('history',this)"><i class="fas fa-clock-rotate-left"></i> My History</button>
+  </div>
+  <div id="client-sub"></div>`;
+      clientSub('book', document.querySelector('.inner-tab'));
+    };
+
+    function clientSub(sub, el) {
+      document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      const div = document.getElementById('client-sub');
+      if (sub === 'book') renderBooking(div);
+      else if (sub === 'calc') div.innerHTML = calcWidget(true);
+      else renderClientHistory(div);
+    }
+
+    function renderBooking(div) {
+      const saved = currentUser.savedReceivers || [];
+      const savedOpts = saved.map((r, i) => `<option value="${i}">${r.name} — ${r.city}</option>`).join('');
+      div.innerHTML = `
+  <div class="grid2">
+    <div class="panel">
+      <h3><i class="fas fa-paper-plane"></i> New Shipment Booking</h3>
+      <div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:1rem;margin-bottom:1.2rem">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1px">Sender</div>
+        <div class="grid2">
+          <div class="form-group"><label>Name</label><input id="b-sname" value="${currentUser.name}" placeholder="Full name"></div>
+          <div class="form-group"><label>Mobile</label><input id="b-smob" value="${currentUser.mobile}" placeholder="07X XXX XXXX"></div>
+        </div>
+      </div>
+      <div style="background:rgba(26,86,219,.06);border:1px solid rgba(26,86,219,.2);border-radius:10px;padding:1rem;margin-bottom:1.2rem">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1px">Receiver
+          ${saved.length ? `<span style="float:right;color:var(--gold);font-size:.78rem;cursor:pointer" onclick="this.nextElementSibling.style.display='block';this.style.display='none'">📚 Load Saved</span><div style="display:none;margin-top:.5rem"><select onchange="loadReceiver(this.value)"><option value="">— Select —</option>${savedOpts}</select></div>` : ''}
+        </div>
+        <div class="grid2">
+          <div class="form-group"><label>Name</label><input id="b-rname" placeholder="Agent/Shop name"></div>
+          <div class="form-group"><label>Mobile</label><input id="b-rmob" placeholder="07X XXX XXXX"></div>
+        </div>
+        <div class="grid2">
+          <div class="form-group"><label>City / Province</label><input id="b-rcity" placeholder="e.g. Basra"></div>
+          <div class="form-group"><label>Address</label><input id="b-raddr" placeholder="Street / Area"></div>
+        </div>
+        <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:.5rem;cursor:pointer">
+          <input type="checkbox" id="save-recv"> Save receiver for future use</label>
+      </div>
+      <div class="form-group"><label>Shipping Zone</label>
+        <select id="b-zone">
+          <option value="domestic">Domestic (Inside Baghdad)</option>
+          <option value="shortHaul">Short Haul (Babil, Diyala, Wasit…)</option>
+          <option value="middleHaul">Middle Haul (Najaf, Karbala, Babylon…)</option>
+          <option value="longHaul">Long Haul (Basra, Mosul, Erbil…)</option>
+        </select>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">Box Dimensions (cm)</div>
+      <div class="grid4">
+        <div class="form-group"><label>Length</label><input type="number" id="b-l" value="100" min="0"></div>
+        <div class="form-group"><label>Width</label><input type="number" id="b-w" value="100" min="0"></div>
+        <div class="form-group"><label>Height</label><input type="number" id="b-h" value="100" min="0"></div>
+        <div class="form-group"><label>Boxes</label><input type="number" id="b-q" value="1" min="1"></div>
+      </div>
+      <div class="form-group"><label>Total Weight (kg)</label><input type="number" id="b-wt" value="0" min="0"></div>
+      <div class="form-group"><label>Cargo Description</label><textarea id="b-desc" placeholder="e.g. 50 bags cement, 10 boxes tiles…"></textarea></div>
+      <button class="btn btn-gold" onclick="previewBooking()"><i class="fas fa-eye"></i> Preview & Get Quote</button>
+    </div>
+    <div>
+      <div class="panel" id="booking-preview" style="display:none;margin-bottom:1.5rem">
+        <h3><i class="fas fa-receipt"></i> Quote Preview</h3>
+        <div id="preview-content"></div>
+        <div class="flex-wrap mt2" id="booking-actions"></div>
+      </div>
+      <div class="panel">
+        <h3><i class="fas fa-circle-info"></i> Pricing Guide</h3>
+        <p style="font-size:.83rem;color:var(--muted);line-height:1.7">Our system calculates using 3 methods simultaneously and charges the highest: Volume (CBM), Weight (kg), or Flat Box Rate. One total — no hidden charges.</p>
+        <div style="margin-top:1rem;font-size:.82rem">
+          <div class="flex gap1 mb1" style="margin-bottom:.5rem"><span class="badge badge-green">Partial Car</span><span style="font-size:.8rem;color:var(--muted)"> Below ${DB.getRates().fullCarThreshold} m³</span></div>
+          <div class="flex gap1"><span class="badge badge-gold">Full Car</span><span style="font-size:.8rem;color:var(--muted)"> Above ${DB.getRates().fullCarThreshold} m³</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    window.loadReceiver = function (idx) {
+      if (idx === '') return;
+      const r = currentUser.savedReceivers[+idx];
+      document.getElementById('b-rname').value = r.name || '';
+      document.getElementById('b-rmob').value = r.mobile || '';
+      document.getElementById('b-rcity').value = r.city || '';
+      document.getElementById('b-raddr').value = r.addr || '';
+    };
+
+    window.previewBooking = function () {
+      const sname = document.getElementById('b-sname').value.trim();
+      const smob = document.getElementById('b-smob').value.trim();
+      const rname = document.getElementById('b-rname').value.trim();
+      const rmob = document.getElementById('b-rmob').value.trim();
+      const rcity = document.getElementById('b-rcity').value.trim();
+      const raddr = document.getElementById('b-raddr').value.trim();
+      const zone = document.getElementById('b-zone').value;
+      const l = +document.getElementById('b-l').value || 0;
+      const w = +document.getElementById('b-w').value || 0;
+      const h = +document.getElementById('b-h').value || 0;
+      const q = +document.getElementById('b-q').value || 1;
+      const wt = +document.getElementById('b-wt').value || 0;
+      const desc = document.getElementById('b-desc').value;
+      if (!sname || !rname || !rcity) { toast('Fill sender, receiver name and city', 'warn'); return; }
+      const calc = calcShipping(l, w, h, q, wt, zone);
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      document.getElementById('booking-preview').style.display = 'block';
+      document.getElementById('preview-content').innerHTML = `
+    <div class="flex gap1 mb1">
+      <span class="badge badge-blue">${zl[zone]}</span>
+      <span class="badge badge-gold">${calc.carType}</span>
+    </div>
+    <div class="receipt-row"><span style="color:var(--muted)">From</span><span>${sname}</span></div>
+    <div class="receipt-row"><span style="color:var(--muted)">To</span><span>${rname} — ${rcity}</span></div>
+    <div class="receipt-row"><span style="color:var(--muted)">Volume</span><span>${calc.totalCbm} m³</span></div>
+    <div class="receipt-row"><span style="color:var(--muted)">Weight</span><span>${wt} kg</span></div>
+    <div class="receipt-row"><span style="color:var(--muted)">Boxes</span><span>${q}</span></div>
+    ${desc ? `<div class="receipt-row"><span style="color:var(--muted)">Cargo</span><span>${desc}</span></div>` : ''}
+    <div style="margin-top:1rem;padding:1rem;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:10px">
+      <div style="font-size:.8rem;color:var(--muted)">TOTAL COST</div>
+      <div style="font-size:2.5rem;font-weight:800;color:var(--success)">$${calc.cost}</div>
+    </div>`;
+      window._pending = {
+        senderName: sname, senderMobile: smob, receiverName: rname, receiverMobile: rmob,
+        receiverCity: rcity, receiverAddr: raddr, zone, totalCbm: calc.totalCbm, weightKg: wt,
+        boxes: q, cost: calc.cost, carType: calc.carType, method: calc.method, desc, clientId: currentUser.id
+      };
+      document.getElementById('booking-actions').innerHTML = `
+    <button class="btn btn-gold" onclick="confirmBooking()"><i class="fas fa-check"></i> Confirm & Save to Cloud</button>`;
+    };
+
+    window.confirmBooking = function () {
+      if (!window._pending) return;
+      const trip = DB.createTrip(window._pending);
+      const saveEl = document.getElementById('save-recv');
+      if (saveEl && saveEl.checked) {
+        const users = DB.getUsers();
+        const u = users.find(u => u.id === currentUser.id);
+        if (u) {
+          if (!u.savedReceivers) u.savedReceivers = [];
+          u.savedReceivers.push({ name: trip.receiverName, mobile: trip.receiverMobile, city: trip.receiverCity, addr: trip.receiverAddr });
+          DB.updateUser(u);
+          currentUser = u;
+        }
+      }
+      window._pending = null;
+      toast('Booking saved to Firebase! Ref: ' + trip.id, 'success');
+      document.getElementById('booking-actions').innerHTML = `
+    <button class="btn btn-gold btn-sm" onclick='generatePDF(${JSON.stringify(trip)})'><i class="fas fa-file-pdf"></i> PDF</button>
+    <button class="btn btn-ghost btn-sm" onclick='printReceipt(${JSON.stringify(trip)})'><i class="fas fa-print"></i> Print</button>
+    <button class="btn btn-wa btn-sm" onclick='waLink(${JSON.stringify(trip)})'><i class="fab fa-whatsapp"></i> WhatsApp</button>`;
+    };
+
+    function renderClientHistory(div) {
+      const trips = DB.getTripsByClient(currentUser.id);
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      if (!trips.length) {
+        div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No booking history yet. Book your first shipment!</p></div>`;
+        return;
+      }
+      const rows = trips.map(t => `<tr>
+    <td><span class="badge badge-blue">${t.id}</span></td>
+    <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+    <td>${t.receiverName}</td>
+    <td>${t.receiverCity}</td>
+    <td>${zl[t.zone] || t.zone}</td>
+    <td>${t.totalCbm} m³</td>
+    <td style="color:var(--success);font-weight:700">$${t.cost}</td>
+    <td><span class="badge badge-warn">${t.status}</span></td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick='generatePDF(${JSON.stringify(t)})'><i class="fas fa-file-pdf"></i></button>
+      <button class="btn btn-wa btn-sm" onclick='waLink(${JSON.stringify(t)})'><i class="fab fa-whatsapp"></i></button>
+    </td>
+  </tr>`).join('');
+      div.innerHTML = `<div class="panel"><h3><i class="fas fa-history"></i> All My Bookings (Cloud)</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ref</th><th>Date</th><th>Receiver</th><th>City</th><th>Zone</th><th>Volume</th><th>Cost</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>`;
+    }
+
+    // ---- DRIVER ----
+    renders.driver = function () {
+      document.getElementById('main-content').innerHTML = `
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="drvSub('schedule',this)"><i class="fas fa-route"></i> My Trips</button>
+    <button class="inner-tab" onclick="drvSub('calc',this)"><i class="fas fa-calculator"></i> Load Verifier</button>
+    <button class="inner-tab" onclick="drvSub('expenses',this)"><i class="fas fa-money-bill-wave"></i> Expenses</button>
+  </div>
+  <div id="drv-sub"></div>`;
+      drvSub('schedule', document.querySelector('.inner-tab'));
+    };
+
+    function drvSub(sub, el) {
+      document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      const div = document.getElementById('drv-sub');
+      if (sub === 'schedule') renderDriverTrips(div);
+      else if (sub === 'calc') div.innerHTML = calcWidget(false);
+      else renderDriverExpenses(div);
+    }
+
+    function renderDriverTrips(div) {
+      const trips = DB.getTrips();
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips in system yet.</p></div>`; return; }
+      div.innerHTML = `<div class="panel"><h3><i class="fas fa-route"></i> All Trip Schedule</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Destination</th><th>Zone</th><th>Vol (m³)</th><th>Weight (kg)</th><th>Boxes</th><th>Status</th></tr></thead>
+      <tbody>${trips.map(t => `<tr>
+        <td><span class="badge badge-blue">${t.id}</span></td>
+        <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+        <td>${t.senderName}</td>
+        <td>${t.receiverCity}</td>
+        <td>${zl[t.zone] || t.zone}</td>
+        <td>${t.totalCbm}</td>
+        <td>${t.weightKg}</td>
+        <td>${t.boxes}</td>
+        <td><span class="badge badge-warn">${t.status}</span></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div></div>`;
+    }
+
+    function renderDriverExpenses(div) {
+      const trips = DB.getTrips();
+      const opts = trips.map(t => `<option value="${t.id}">${t.id} → ${t.receiverCity}</option>`).join('');
+      const allExp = [];
+      trips.forEach(t => (t.expenses || []).forEach(e => allExp.push({ ...e, tripId: t.id })));
+      div.innerHTML = `<div class="grid2">
+    <div class="panel">
+      <h3><i class="fas fa-plus-circle"></i> Log Expense</h3>
+      ${trips.length ? `
+        <div class="form-group"><label>Select Trip</label><select id="exp-trip">${opts}</select></div>
+        <div class="form-group"><label>Type</label>
+          <select id="exp-type">
+            <option>Fuel / Diesel</option>
+            <option>Driver Salary</option>
+            <option>Road Tolls</option>
+            <option>Vehicle Maintenance</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Amount ($)</label><input type="number" id="exp-amount" min="0" step=".5" placeholder="0.00"></div>
+        <div class="form-group"><label>Notes</label><input id="exp-notes" placeholder="Optional"></div>
+        <button class="btn btn-gold" onclick="submitExpense()"><i class="fas fa-save"></i> Save to Cloud</button>`
+          : '<p style="color:var(--muted)">No trips available.</p>'}
+    </div>
+    <div class="panel">
+      <h3><i class="fas fa-list"></i> All Logged Expenses</h3>
+      ${allExp.length ? allExp.reverse().map(e => `
+        <div class="exp-item">
+          <div><div style="font-weight:600;font-size:.88rem">${e.type}</div>
+          <div style="font-size:.76rem;color:var(--muted)">${e.tripId} | ${new Date(e.date).toLocaleDateString()} ${e.notes ? '— ' + e.notes : ''} | ${e.driver}</div></div>
+          <span style="color:var(--danger);font-weight:700">-$${e.amount}</span>
+        </div>`).join('')
+          : '<p style="color:var(--muted);font-size:.85rem">No expenses yet.</p>'}
+    </div>
+  </div>`;
+    }
+
+    window.submitExpense = function () {
+      const tripId = document.getElementById('exp-trip').value;
+      const type = document.getElementById('exp-type').value;
+      const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+      const notes = document.getElementById('exp-notes').value;
+      if (amount <= 0) { toast('Enter valid amount', 'warn'); return; }
+      const trips = DB.getTrips();
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) { toast('Trip not found', 'danger'); return; }
+      trip.expenses.push({ type, amount, notes, date: new Date().toISOString(), driver: currentUser.name });
+      DB.updateTrip(trip);
+      toast('Expense saved to Firebase!', 'success');
+      renderDriverExpenses(document.getElementById('drv-sub'));
+    };
+
+    // ---- BROKER ----
+    renders.broker = function () {
+      const mc = document.getElementById('main-content');
+      const rates = DB.getRates();
+      const users = DB.getUsers();
+      const trips = DB.getTrips();
+      let broker = currentUser.role === 'broker' ? currentUser : users.find(u => u.role === 'broker');
+      if (!broker) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">No broker account found.</p></div>`; return; }
+      const pct = (broker.commissionPct || rates.brokerPct || 10) / 100;
+      const myTrips = trips.filter(t => (broker.clientIds || []).includes(t.clientId) || t.brokerId === broker.id);
+      let totalRev = 0;
+      myTrips.forEach(t => totalRev += parseFloat(t.cost || 0));
+      const myComm = totalRev * pct;
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      mc.innerHTML = `
+    <div class="grid3 mb2">
+      <div class="stat-card"><div class="label">Total Business Value</div><div class="value" style="color:var(--gold)">$${totalRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="label">My Commission (${(pct * 100).toFixed(0)}%)</div><div class="value" style="color:var(--success)">$${myComm.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="label">Total Trips</div><div class="value">${myTrips.length}</div></div>
+    </div>
+    <div class="panel">
+      <h3><i class="fas fa-list"></i> Client Manifest</h3>
+      ${myTrips.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Ref</th><th>Client</th><th>City</th><th>Value</th><th>My Cut</th></tr></thead>
+        <tbody>${myTrips.map(t => `<tr>
+          <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+          <td><span class="badge badge-blue">${t.id}</span></td>
+          <td>${t.senderName}</td><td>${t.receiverCity}</td>
+          <td>$${t.cost}</td>
+          <td style="color:var(--success);font-weight:700">+$${(parseFloat(t.cost) * pct).toFixed(2)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`: '<p style="color:var(--muted)">No trips in your network. Management assigns trips to brokers.</p>'}
+    </div>`;
+    };
+
+    // ---- SUB-BROKER ----
+    renders.subbroker = function () {
+      const mc = document.getElementById('main-content');
+      const rates = DB.getRates();
+      const users = DB.getUsers();
+      const trips = DB.getTrips();
+      let sb = currentUser.role === 'subbroker' ? currentUser : users.find(u => u.role === 'subbroker');
+      if (!sb) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">No sub-broker account found.</p></div>`; return; }
+      const pct = (sb.commissionPct || rates.subBrokerPct || 5) / 100;
+      const parent = users.find(u => u.id === sb.parentBrokerId);
+      const parentClients = parent ? (parent.clientIds || []) : [];
+      const myTrips = trips.filter(t => parentClients.includes(t.clientId) || t.brokerId === sb.parentBrokerId);
+      let totalRev = 0;
+      myTrips.forEach(t => totalRev += parseFloat(t.cost || 0));
+      mc.innerHTML = `
+    <div class="grid3 mb2">
+      <div class="stat-card"><div class="label">Network Business Value</div><div class="value" style="color:var(--gold)">$${totalRev.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="label">My Override (${(pct * 100).toFixed(0)}%)</div><div class="value" style="color:var(--success)">$${(totalRev * pct).toFixed(2)}</div></div>
+      <div class="stat-card"><div class="label">Parent Broker</div><div class="value" style="font-size:1.2rem">${parent ? parent.name : '—'}</div></div>
+    </div>
+    <div class="panel">
+      <h3><i class="fas fa-sitemap"></i> Network Manifest</h3>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">You earn ${(pct * 100).toFixed(0)}% override on all business through your parent broker's network.</p>
+      ${myTrips.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Ref</th><th>Via Broker</th><th>City</th><th>Value</th><th>My Cut</th></tr></thead>
+        <tbody>${myTrips.map(t => `<tr>
+          <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+          <td><span class="badge badge-blue">${t.id}</span></td>
+          <td>${parent ? parent.name : '—'}</td><td>${t.receiverCity}</td>
+          <td>$${t.cost}</td>
+          <td style="color:var(--success);font-weight:700">+$${(parseFloat(t.cost) * pct).toFixed(2)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`: '<p style="color:var(--muted)">No network trips yet.</p>'}
+    </div>`;
+    };
+
+    // ---- MANAGEMENT ----
+    renders.management = function () {
+      document.getElementById('main-content').innerHTML = `
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="mgtSub('dash',this)"><i class="fas fa-chart-line"></i> Dashboard</button>
+    <button class="inner-tab" onclick="mgtSub('rates',this)"><i class="fas fa-tags"></i> Rates</button>
+    <button class="inner-tab" onclick="mgtSub('trips',this)"><i class="fas fa-truck"></i> All Trips</button>
+    <button class="inner-tab" onclick="mgtSub('brokers',this)"><i class="fas fa-handshake"></i> Brokers</button>
+    <button class="inner-tab" onclick="mgtSub('users',this)"><i class="fas fa-users"></i> Users</button>
+  </div>
+  <div id="mgt-sub"></div>`;
+      mgtSub('dash', document.querySelector('.inner-tab'));
+    };
+
+    function mgtSub(sub, el) {
+      document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      const div = document.getElementById('mgt-sub');
+      if (sub === 'dash') renderMgtDash(div);
+      else if (sub === 'rates') renderMgtRates(div);
+      else if (sub === 'trips') renderMgtTrips(div);
+      else if (sub === 'brokers') renderMgtBrokers(div);
+      else renderMgtUsers(div);
+    }
+
+    function renderMgtDash(div) {
+      const trips = DB.getTrips();
+      const users = DB.getUsers();
+      const rates = DB.getRates();
+      let totalRev = 0, totalExp = 0;
+      trips.forEach(t => {
+        totalRev += parseFloat(t.cost || 0);
+        (t.expenses || []).forEach(e => totalExp += parseFloat(e.amount || 0));
+      });
+      const clients = users.filter(u => u.role === 'client');
+      const zones = ['domestic', 'shortHaul', 'middleHaul', 'longHaul'];
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      div.innerHTML = `
+    <div class="grid4 mb2">
+      <div class="stat-card"><div class="icon"><i class="fas fa-truck"></i></div><div class="label">Total Trips</div><div class="value" style="color:var(--gold)">${trips.length}</div></div>
+      <div class="stat-card"><div class="icon"><i class="fas fa-dollar-sign"></i></div><div class="label">Total Revenue</div><div class="value" style="color:var(--success)">$${totalRev.toFixed(0)}</div></div>
+      <div class="stat-card"><div class="icon"><i class="fas fa-receipt"></i></div><div class="label">Total Expenses</div><div class="value" style="color:var(--danger)">$${totalExp.toFixed(0)}</div></div>
+      <div class="stat-card"><div class="icon"><i class="fas fa-users"></i></div><div class="label">Clients</div><div class="value">${clients.length}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3><i class="fas fa-map-marked-alt"></i> Zone Breakdown</h3>
+        ${zones.map(z => {
+        const zt = trips.filter(t => t.zone === z);
+        const zr = zt.reduce((a, t) => a + parseFloat(t.cost || 0), 0);
+        return `<div class="exp-item"><div><div style="font-weight:600">${zl[z]}</div><div style="font-size:.76rem;color:var(--muted)">${zt.length} trips</div></div><span style="color:var(--success)">$${zr.toFixed(2)}</span></div>`;
+      }).join('')}
+      </div>
+      <div class="panel"><h3><i class="fas fa-info-circle"></i> Current Rates</h3>
+        ${zones.map(z => {
+        const r = rates[z];
+        return `<div class="exp-item"><div style="font-weight:600">${zl[z]}</div><span style="font-size:.8rem;color:var(--muted)">$${r.cbm}/m³ · $${r.kg}/kg · $${r.box}/box</span></div>`;
+      }).join('')}
+        <div class="exp-item"><div>Full Car Base</div><span style="color:var(--gold)">$${rates.fullCarBase}</span></div>
+        <div class="exp-item"><div>Partial Car Base</div><span style="color:var(--gold)">$${rates.partialCarBase}</span></div>
+        <div class="exp-item"><div>Threshold</div><span style="color:var(--gold)">${rates.fullCarThreshold} m³</span></div>
+        <div class="exp-item"><div>Broker Commission</div><span style="color:var(--gold)">${rates.brokerPct}%</span></div>
+        <div class="exp-item"><div>Sub-Broker Commission</div><span style="color:var(--gold)">${rates.subBrokerPct}%</span></div>
+      </div>
+    </div>`;
+    }
+
+    function renderMgtRates(div) {
+      const r = DB.getRates();
+      const zones = [['domestic', 'Domestic (Baghdad)'], ['shortHaul', 'Short Haul'], ['middleHaul', 'Middle Haul'], ['longHaul', 'Long Haul']];
+      div.innerHTML = `<div class="grid2">
+    <div class="panel">
+      <h3><i class="fas fa-tags"></i> Zone Rates</h3>
+      ${zones.map(([z, lbl]) => `
+        <div style="margin-bottom:1.2rem;padding:1rem;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+          <div style="font-weight:600;margin-bottom:.8rem;color:var(--gold)">${lbl}</div>
+          <div class="grid3">
+            <div class="form-group"><label>Per CBM ($)</label><input type="number" id="r-${z}-cbm" value="${r[z].cbm}" step=".5"></div>
+            <div class="form-group"><label>Per KG ($)</label><input type="number" id="r-${z}-kg" value="${r[z].kg}" step=".1"></div>
+            <div class="form-group"><label>Per Box ($)</label><input type="number" id="r-${z}-box" value="${r[z].box}" step=".5"></div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="panel">
+      <h3><i class="fas fa-sliders"></i> System Constants</h3>
+      <div class="form-group"><label>Full Car Threshold (m³)</label><input type="number" id="r-fct" value="${r.fullCarThreshold}"><small style="color:var(--muted);font-size:.78rem">Volume above this = Full Car</small></div>
+      <div class="form-group"><label>Full Car Base Cost ($)</label><input type="number" id="r-fcb" value="${r.fullCarBase}"></div>
+      <div class="form-group"><label>Partial Car Base Cost ($)</label><input type="number" id="r-pcb" value="${r.partialCarBase}"></div>
+      <hr class="div">
+      <h3 style="margin-bottom:1rem"><i class="fas fa-percent"></i> Commission Defaults</h3>
+      <div class="form-group"><label>Broker Default Commission (%)</label><input type="number" id="r-bpct" value="${r.brokerPct}" min="0" max="100"></div>
+      <div class="form-group"><label>Sub-Broker Default Commission (%)</label><input type="number" id="r-sbpct" value="${r.subBrokerPct}" min="0" max="100"></div>
+      <button class="btn btn-gold full" onclick="saveRates()"><i class="fas fa-cloud-upload-alt"></i> Save to Firebase</button>
+    </div>
+  </div>`;
+    }
+
+    window.saveRates = function () {
+      const r = DB.getRates();
+      ['domestic', 'shortHaul', 'middleHaul', 'longHaul'].forEach(z => {
+        r[z].cbm = parseFloat(document.getElementById(`r-${z}-cbm`).value) || r[z].cbm;
+        r[z].kg = parseFloat(document.getElementById(`r-${z}-kg`).value) || r[z].kg;
+        r[z].box = parseFloat(document.getElementById(`r-${z}-box`).value) || r[z].box;
+      });
+      r.fullCarThreshold = parseFloat(document.getElementById('r-fct').value) || r.fullCarThreshold;
+      r.fullCarBase = parseFloat(document.getElementById('r-fcb').value) || r.fullCarBase;
+      r.partialCarBase = parseFloat(document.getElementById('r-pcb').value) || r.partialCarBase;
+      r.brokerPct = parseFloat(document.getElementById('r-bpct').value) || r.brokerPct;
+      r.subBrokerPct = parseFloat(document.getElementById('r-sbpct').value) || r.subBrokerPct;
+      DB.setRates(r);
+      toast('Rates updated & synced to Firebase ☁️', 'success');
+    };
+
+    function renderMgtTrips(div) {
+      const trips = DB.getTrips();
+      const users = DB.getUsers();
+      const brokers = users.filter(u => u.role === 'broker');
+      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
+      const bOpts = brokers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+      if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips yet.</p></div>`; return; }
+      div.innerHTML = `<div class="panel" style="overflow:auto"><h3><i class="fas fa-truck"></i> All Trips (${trips.length})</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Receiver</th><th>City</th><th>Zone</th><th>Vol</th><th>Cost</th><th>Status</th><th>Assign Broker</th><th>PDF</th></tr></thead>
+      <tbody>${trips.map(t => `<tr>
+        <td><span class="badge badge-blue">${t.id}</span></td>
+        <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+        <td>${t.senderName}</td><td>${t.receiverName}</td><td>${t.receiverCity}</td>
+        <td>${zl[t.zone] || t.zone}</td>
+        <td>${t.totalCbm}m³</td>
+        <td style="color:var(--success);font-weight:700">$${t.cost}</td>
+        <td><select style="padding:.3rem;font-size:.78rem;width:110px" onchange="assignStatus('${t.id}',this.value)">
+          <option ${t.status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option ${t.status === 'In Transit' ? 'selected' : ''}>In Transit</option>
+          <option ${t.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+        </select></td>
+        <td><select style="padding:.3rem;font-size:.78rem;width:120px" onchange="assignBroker('${t.id}',this.value)">
+          <option value="">None</option>${bOpts}
+        </select></td>
+        <td><button class="btn btn-gold btn-sm" onclick='generatePDF(${JSON.stringify(t)})'><i class="fas fa-file-pdf"></i></button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div></div>`;
+    }
+
+    window.assignStatus = function (id, status) {
+      const t = DB.getTrips().find(t => t.id === id);
+      if (t) { t.status = status; DB.updateTrip(t); toast('Status updated & synced', 'success'); }
+    };
+    window.assignBroker = function (id, bId) {
+      const trips = DB.getTrips();
+      const t = trips.find(t => t.id === id);
+      if (!t) return;
+      t.brokerId = bId;
+      DB.updateTrip(t);
+      if (bId) {
+        const users = DB.getUsers();
+        const b = users.find(u => u.id === bId);
+        if (b) {
+          if (!b.clientIds) b.clientIds = [];
+          if (!b.clientIds.includes(t.clientId)) b.clientIds.push(t.clientId);
+          DB.updateUser(b);
+        }
+      }
+      toast('Broker assigned & synced to Firebase', 'success');
+    };
+
+    function renderMgtBrokers(div) {
+      const users = DB.getUsers();
+      const trips = DB.getTrips();
+      const rates = DB.getRates();
+      const brokers = users.filter(u => u.role === 'broker' || u.role === 'subbroker');
+      div.innerHTML = `<div class="grid2">
+    <div class="panel">
+      <h3><i class="fas fa-handshake"></i> Broker Management</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Role</th><th>Commission %</th><th>Earned</th><th>Update</th></tr></thead>
+        <tbody>${brokers.map(b => {
+        const bTrips = trips.filter(t => (b.clientIds || []).includes(t.clientId) || t.brokerId === b.id);
+        const rev = bTrips.reduce((a, t) => a + parseFloat(t.cost || 0), 0);
+        const pct = b.commissionPct || (b.role === 'broker' ? rates.brokerPct : rates.subBrokerPct);
+        return `<tr>
+            <td>${b.name}</td>
+            <td><span class="badge ${b.role === 'broker' ? 'badge-gold' : 'badge-blue'}">${b.role}</span></td>
+            <td>${pct}%</td>
+            <td style="color:var(--success)">$${(rev * (pct / 100)).toFixed(2)}</td>
+            <td><div class="flex gap1">
+              <input type="number" id="bp-${b.id}" value="${pct}" style="width:65px;padding:.3rem .5rem;font-size:.82rem" min="0" max="100">
+              <button class="btn btn-gold btn-sm" onclick="setBrokerPct('${b.id}')">Set</button>
+            </div></td>
+          </tr>`;
+      }).join('')}
+        </tbody>
+      </table></div>
+    </div>
+    <div class="panel">
+      <h3><i class="fas fa-user-plus"></i> Add Broker Account</h3>
+      <div class="form-group"><label>Full Name</label><input id="nb-name" placeholder="Broker name"></div>
+      <div class="form-group"><label>Mobile / Username</label><input id="nb-mob" placeholder="07X XXX XXXX"></div>
+      <div class="form-group"><label>Password</label><input id="nb-pass" type="password" placeholder="Set password"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="nb-role" onchange="document.getElementById('nb-pg').style.display=this.value==='subbroker'?'block':'none'">
+          <option value="broker">Broker (${rates.brokerPct}% default)</option>
+          <option value="subbroker">Sub-Broker (${rates.subBrokerPct}% default)</option>
+        </select>
+      </div>
+      <div id="nb-pg" style="display:none" class="form-group"><label>Parent Broker</label>
+        <select id="nb-parent">${users.filter(u => u.role === 'broker').map(b => `<option value="${b.id}">${b.name}</option>`).join('')}</select>
+      </div>
+      <button class="btn btn-gold full" onclick="addBroker()"><i class="fas fa-cloud-upload-alt"></i> Add to Firebase</button>
+    </div>
+  </div>`;
+    }
+
+    window.setBrokerPct = function (uid) {
+      const pct = parseFloat(document.getElementById('bp-' + uid).value) || 0;
+      const users = DB.getUsers();
+      const u = users.find(u => u.id === uid);
+      if (u) { u.commissionPct = pct; DB.updateUser(u); toast('Commission updated & synced', 'success'); }
+    };
+    window.addBroker = function () {
+      const name = document.getElementById('nb-name').value.trim();
+      const mob = document.getElementById('nb-mob').value.trim();
+      const pass = document.getElementById('nb-pass').value.trim();
+      const role = document.getElementById('nb-role').value;
+      if (!name || !mob || !pass) { toast('Fill all fields', 'warn'); return; }
+      const users = DB.getUsers();
+      if (users.find(u => u.mobile === mob)) { toast('Mobile already exists', 'danger'); return; }
+      const rates = DB.getRates();
+      const nu = {
+        id: (role === 'broker' ? 'BRK' : 'SBRK') + Date.now(), mobile: mob, password: pass, role, name,
+        commissionPct: role === 'broker' ? rates.brokerPct : rates.subBrokerPct, clientIds: [], createdAt: new Date().toISOString()
+      };
+      if (role === 'subbroker') { const pe = document.getElementById('nb-parent'); if (pe) nu.parentBrokerId = pe.value; }
+      AppData.users.push(nu);
+      fdb.collection('users').doc(nu.id).set(nu);
+      toast(name + ' added to Firebase', 'success');
+      renderMgtBrokers(document.getElementById('mgt-sub'));
+    };
+
+    function renderMgtUsers(div) {
+      const users = DB.getUsers();
+      const trips = DB.getTrips();
+      const rc = { management: 'badge-gold', client: 'badge-blue', driver: 'badge-green', broker: 'badge-warn', subbroker: 'badge-red' };
+      div.innerHTML = `<div class="panel"><h3><i class="fas fa-users"></i> All System Users (${users.length})</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Joined</th><th>Trips</th></tr></thead>
+      <tbody>${users.map(u => `<tr>
+        <td>${u.name}</td><td>${u.mobile}</td>
+        <td><span class="badge ${rc[u.role] || 'badge-blue'}">${u.role}</span></td>
+        <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'System'}</td>
+        <td>${trips.filter(t => t.clientId === u.id).length}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div></div>`;
+    }
+
+    // =============================================
+    // APP INIT — load Firebase data then show app
+    // =============================================
+    async function initApp() {
+      try {
+        await loadAppData();
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('app-sidebar').style.display = 'flex';
+        document.getElementById('app-main').style.display = 'flex';
+        switchTab('public');
+      } catch (err) {
+        console.error(err);
+        setLoadMsg('⚠️ Firebase connection failed. Check console. Error: ' + err.message);
+      }
+    }
+
+    initApp();
+  </script>
+</body>
+
+</html>
