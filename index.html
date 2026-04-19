@@ -972,8 +972,14 @@
     // SESSION
     // =============================================
     let currentUser = null;
-    function setSession(user) { currentUser = user; }
-    function clearSession() { currentUser = null; }
+    function setSession(user) { 
+      currentUser = user; 
+      localStorage.setItem('al_akl_session', JSON.stringify({ mobile: user.mobile, pass: user.password }));
+    }
+    function clearSession() { 
+      currentUser = null; 
+      localStorage.removeItem('al_akl_session');
+    }
 
     // =============================================
     // ROUTER
@@ -1776,10 +1782,14 @@
       const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
       const bOpts = brokers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
       if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips yet.</p></div>`; return; }
-      div.innerHTML = `<div class="panel" style="overflow:auto"><h3><i class="fas fa-truck"></i> All Trips (${trips.length})</h3>
+      div.innerHTML = `<div class="panel" style="overflow:auto">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h3 style="margin:0"><i class="fas fa-truck"></i> All Trips (${trips.length})</h3>
+      <input type="text" id="mgt-trip-search" placeholder="Search Ref Code..." style="width:220px; padding:.5rem; font-size:.85rem; border-radius:8px" onkeyup="filterMgtTrips()">
+    </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Receiver</th><th>City</th><th>Zone</th><th>Vol</th><th>Cost</th><th>Status</th><th>Assign Broker</th><th>PDF</th></tr></thead>
-      <tbody>${trips.map(t => `<tr>
+      <tbody id="mgt-trips-tbody">${trips.map(t => `<tr>
         <td><span class="badge badge-blue">${t.id}</span></td>
         <td>${new Date(t.createdAt).toLocaleDateString()}</td>
         <td>${t.senderName}</td><td>${t.receiverName}</td><td>${t.receiverCity}</td>
@@ -1799,6 +1809,16 @@
       </tbody>
     </table></div></div>`;
     }
+
+    window.filterMgtTrips = function() {
+      const q = document.getElementById('mgt-trip-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#mgt-trips-tbody tr');
+      rows.forEach(r => {
+        const ref = r.querySelector('td:first-child').textContent.toLowerCase();
+        if (ref.includes(q)) r.style.display = '';
+        else r.style.display = 'none';
+      });
+    };
 
     window.assignStatus = function (id, status) {
       const t = DB.getTrips().find(t => t.id === id);
@@ -1950,7 +1970,19 @@
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('app-sidebar').style.display = 'flex';
         document.getElementById('app-main').style.display = 'flex';
-        switchTab('public');
+        let targetTab = 'public';
+        try {
+          const saved = localStorage.getItem('al_akl_session');
+          if (saved) {
+            const { mobile, pass } = JSON.parse(saved);
+            const user = DB.getUser(mobile, pass);
+            if (user) {
+              currentUser = user;
+              targetTab = user.role;
+            }
+          }
+        } catch (e) {}
+        switchTab(targetTab);
       } catch (err) {
         console.error(err);
         setLoadMsg('⚠️ Firebase connection failed. Check console. Error: ' + err.message);
