@@ -48,6 +48,7 @@
         radial-gradient(ellipse at 90% 20%, rgba(212, 175, 55, .08) 0%, transparent 55%);
     }
 
+
     /* LOADING SCREEN */
     #loading-screen {
       position: fixed;
@@ -845,9 +846,11 @@
         <h3 id="page-title">Public Portal</h3>
         <p id="page-sub">Company Profile &amp; Services</p>
       </div>
-      <div class="user-badge" id="user-badge" style="display:none">
-        <i class="fas fa-circle-user"></i>
-        <span id="badge-name">Guest</span>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div class="user-badge" id="user-badge" style="display:none">
+          <i class="fas fa-circle-user"></i>
+          <span id="badge-name">Guest</span>
+        </div>
       </div>
     </div>
     <div class="content" id="main-content"></div>
@@ -872,6 +875,8 @@
     };
     firebase.initializeApp(firebaseConfig);
     const fdb = firebase.firestore();
+
+    // =============================================
 
     // =============================================
     // IN-MEMORY CACHE (loaded from Firestore once)
@@ -972,12 +977,12 @@
     // SESSION
     // =============================================
     let currentUser = null;
-    function setSession(user) { 
-      currentUser = user; 
+    function setSession(user) {
+      currentUser = user;
       localStorage.setItem('al_akl_session', JSON.stringify({ mobile: user.mobile, pass: user.password }));
     }
-    function clearSession() { 
-      currentUser = null; 
+    function clearSession() {
+      currentUser = null;
       localStorage.removeItem('al_akl_session');
     }
 
@@ -993,7 +998,9 @@
       management: ['Management Dashboard', 'Rates, Trips, Brokers & Full Control']
     };
 
+    let currentTab = 'public';
     function switchTab(name) {
+      currentTab = name;
       const guarded = ['client', 'driver', 'broker', 'subbroker', 'management'];
       if (guarded.includes(name)) {
         if (!currentUser) { showLogin(name); return; }
@@ -1005,7 +1012,17 @@
         if (name === 'management' && role !== 'management') { toast('Management access only', 'danger'); return; }
       }
       document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
-      const [title, sub] = tabTitles[name] || ['', ''];
+
+      const pageTitles = {
+        public: ["Public Portal", "Company Profile & Services"],
+        client: ["Client Hub", "Book Shipments & Track History"],
+        driver: ["Driver Console", "Trips, Expenses & Load Verifier"],
+        broker: ["Broker Center", "Commission Tracking & Client History"],
+        subbroker: ["Sub-Broker Panel", "Extended Network Yield"],
+        management: ["Management Dashboard", "Rates, Trips, Brokers & Full Control"]
+      };
+      const [title, sub] = pageTitles[name] || ['', ''];
+
       document.getElementById('page-title').textContent = title;
       document.getElementById('page-sub').textContent = sub;
       const mc = document.getElementById('main-content');
@@ -1279,7 +1296,7 @@
         <li>Smart volume/weight/box pricing — best rate always selected</li>
         <li>Full Car & Partial Car load options</li>
         <li>Real-time cloud-synced booking confirmations</li>
-        <li>PDF receipts &amp; WhatsApp confirmations</li>
+        <li>PDF receipts & WhatsApp confirmations</li>
         <li>Trusted broker network with live commission tracking</li>
       </ul>
     </div>
@@ -1518,12 +1535,15 @@
     }
 
     function renderDriverTrips(div) {
-      const trips = DB.getTrips();
+      let trips = DB.getTrips();
+      if (currentUser.role === 'driver') {
+        trips = trips.filter(t => t.driverId === currentUser.id);
+      }
       const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
-      if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips in system yet.</p></div>`; return; }
-      div.innerHTML = `<div class="panel"><h3><i class="fas fa-route"></i> All Trip Schedule</h3>
+      if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips assigned to you yet.</p></div>`; return; }
+      div.innerHTML = `<div class="panel"><h3><i class="fas fa-route"></i> My Trips</h3>
     <div class="table-wrap"><table>
-      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Destination</th><th>Zone</th><th>Vol (m³)</th><th>Weight (kg)</th><th>Boxes</th><th>Status</th></tr></thead>
+      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Destination</th><th>Zone</th><th>Vol (m³)</th><th>Weight (kg)</th><th>Boxes</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${trips.map(t => `<tr>
         <td><span class="badge badge-blue">${t.id}</span></td>
         <td>${new Date(t.createdAt).toLocaleDateString()}</td>
@@ -1534,13 +1554,19 @@
         <td>${t.weightKg}</td>
         <td>${t.boxes}</td>
         <td><span class="badge badge-warn">${t.status}</span></td>
+        <td>
+          ${t.status === 'In Transit' ? `<button class="btn btn-gold btn-sm" onclick="completeTrip('${t.id}')"><i class="fas fa-check"></i> Delivered</button>` : '—'}
+        </td>
       </tr>`).join('')}
       </tbody>
     </table></div></div>`;
     }
 
     function renderDriverExpenses(div) {
-      const trips = DB.getTrips();
+      let trips = DB.getTrips();
+      if (currentUser.role === 'driver') {
+        trips = trips.filter(t => t.driverId === currentUser.id);
+      }
       const opts = trips.map(t => `<option value="${t.id}">${t.id} → ${t.receiverCity}</option>`).join('');
       const allExp = [];
       trips.forEach(t => (t.expenses || []).forEach(e => allExp.push({ ...e, tripId: t.id })));
@@ -1595,16 +1621,14 @@
     renders.broker = function () {
       const mc = document.getElementById('main-content');
       const rates = DB.getRates();
-      const users = DB.getUsers();
       const trips = DB.getTrips();
-      let broker = currentUser.role === 'broker' ? currentUser : users.find(u => u.role === 'broker');
-      if (!broker) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">No broker account found.</p></div>`; return; }
+      let broker = currentUser.role === 'broker' ? currentUser : null;
+      if (!broker) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">Access denied.</p></div>`; return; }
       const pct = (broker.commissionPct || rates.brokerPct || 10) / 100;
-      const myTrips = trips.filter(t => (broker.clientIds || []).includes(t.clientId) || t.brokerId === broker.id);
+      const myTrips = trips.filter(t => t.brokerId === broker.id);
       let totalRev = 0;
       myTrips.forEach(t => totalRev += parseFloat(t.cost || 0));
       const myComm = totalRev * pct;
-      const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
       mc.innerHTML = `
     <div class="grid3 mb2">
       <div class="stat-card"><div class="label">Total Business Value</div><div class="value" style="color:var(--gold)">IQD ${totalRev.toFixed(2)}</div></div>
@@ -1622,7 +1646,7 @@
           <td>IQD ${t.cost}</td>
           <td style="color:var(--success);font-weight:700">+IQD ${(parseFloat(t.cost) * pct).toFixed(2)}</td>
         </tr>`).join('')}</tbody>
-      </table></div>`: '<p style="color:var(--muted)">No trips in your network. Management assigns trips to brokers.</p>'}
+      </table></div>`: `<p style="color:var(--muted)">No trips in your network. Management assigns trips to brokers.</p>`}
     </div>`;
     };
 
@@ -1632,12 +1656,11 @@
       const rates = DB.getRates();
       const users = DB.getUsers();
       const trips = DB.getTrips();
-      let sb = currentUser.role === 'subbroker' ? currentUser : users.find(u => u.role === 'subbroker');
-      if (!sb) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">No sub-broker account found.</p></div>`; return; }
+      let sb = currentUser.role === 'subbroker' ? currentUser : null;
+      if (!sb) { mc.innerHTML = `<div class="panel"><p style="color:var(--muted)">Access denied.</p></div>`; return; }
       const pct = (sb.commissionPct || rates.subBrokerPct || 5) / 100;
       const parent = users.find(u => u.id === sb.parentBrokerId);
-      const parentClients = parent ? (parent.clientIds || []) : [];
-      const myTrips = trips.filter(t => parentClients.includes(t.clientId) || t.brokerId === sb.parentBrokerId);
+      const myTrips = trips.filter(t => t.brokerId === sb.parentBrokerId);
       let totalRev = 0;
       myTrips.forEach(t => totalRev += parseFloat(t.cost || 0));
       mc.innerHTML = `
@@ -1648,7 +1671,7 @@
     </div>
     <div class="panel">
       <h3><i class="fas fa-sitemap"></i> Network Manifest</h3>
-      <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">You earn ${(pct * 100).toFixed(0)}% override on all business through your parent broker's network.</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">You earn override on all business through your parent broker's network.</p>
       ${myTrips.length ? `<div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Ref</th><th>Via Broker</th><th>City</th><th>Value</th><th>My Cut</th></tr></thead>
         <tbody>${myTrips.map(t => `<tr>
@@ -1658,7 +1681,7 @@
           <td>IQD ${t.cost}</td>
           <td style="color:var(--success);font-weight:700">+IQD ${(parseFloat(t.cost) * pct).toFixed(2)}</td>
         </tr>`).join('')}</tbody>
-      </table></div>`: '<p style="color:var(--muted)">No network trips yet.</p>'}
+      </table></div>`: `<p style="color:var(--muted)">No network trips yet.</p>`}
     </div>`;
     };
 
@@ -1779,8 +1802,8 @@
       const trips = DB.getTrips();
       const users = DB.getUsers();
       const brokers = users.filter(u => u.role === 'broker');
+      const drivers = users.filter(u => u.role === 'driver');
       const zl = { domestic: 'Domestic', shortHaul: 'Short Haul', middleHaul: 'Middle Haul', longHaul: 'Long Haul' };
-      const bOpts = brokers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
       if (!trips.length) { div.innerHTML = `<div class="panel"><p style="color:var(--muted)">No trips yet.</p></div>`; return; }
       div.innerHTML = `<div class="panel" style="overflow:auto">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -1788,7 +1811,7 @@
       <input type="text" id="mgt-trip-search" placeholder="Search Ref Code..." style="width:220px; padding:.5rem; font-size:.85rem; border-radius:8px" onkeyup="filterMgtTrips()">
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Receiver</th><th>City</th><th>Zone</th><th>Vol</th><th>Cost</th><th>Status</th><th>Assign Broker</th><th>PDF</th></tr></thead>
+      <thead><tr><th>Ref</th><th>Date</th><th>Sender</th><th>Receiver</th><th>City</th><th>Zone</th><th>Vol</th><th>Cost</th><th>Status</th><th>Assign Broker</th><th>Assign Driver</th><th>PDF</th></tr></thead>
       <tbody id="mgt-trips-tbody">${trips.map(t => `<tr>
         <td><span class="badge badge-blue">${t.id}</span></td>
         <td>${new Date(t.createdAt).toLocaleDateString()}</td>
@@ -1802,7 +1825,12 @@
           <option ${t.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
         </select></td>
         <td><select style="padding:.3rem;font-size:.78rem;width:120px" onchange="assignBroker('${t.id}',this.value)">
-          <option value="">None</option>${bOpts}
+          <option value="">None</option>
+          ${brokers.map(b => `<option value="${b.id}" ${t.brokerId === b.id ? 'selected' : ''}>${b.name}</option>`).join('')}
+        </select></td>
+        <td><select style="padding:.3rem;font-size:.78rem;width:120px" onchange="assignDriver('${t.id}',this.value)">
+          <option value="">None</option>
+          ${drivers.map(d => `<option value="${d.id}" ${t.driverId === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}
         </select></td>
         <td><button class="btn btn-gold btn-sm" onclick='generatePDF(${JSON.stringify(t)})'><i class="fas fa-file-pdf"></i></button></td>
       </tr>`).join('')}
@@ -1810,7 +1838,7 @@
     </table></div></div>`;
     }
 
-    window.filterMgtTrips = function() {
+    window.filterMgtTrips = function () {
       const q = document.getElementById('mgt-trip-search').value.toLowerCase();
       const rows = document.querySelectorAll('#mgt-trips-tbody tr');
       rows.forEach(r => {
@@ -1830,16 +1858,24 @@
       if (!t) return;
       t.brokerId = bId;
       DB.updateTrip(t);
-      if (bId) {
-        const users = DB.getUsers();
-        const b = users.find(u => u.id === bId);
-        if (b) {
-          if (!b.clientIds) b.clientIds = [];
-          if (!b.clientIds.includes(t.clientId)) b.clientIds.push(t.clientId);
-          DB.updateUser(b);
-        }
-      }
       toast('Broker assigned & synced to Firebase', 'success');
+    };
+    window.assignDriver = function (id, dId) {
+      const trips = DB.getTrips();
+      const t = trips.find(t => t.id === id);
+      if (!t) return;
+      t.driverId = dId;
+      DB.updateTrip(t);
+      toast('Driver assigned & synced to Firebase', 'success');
+    };
+
+    window.completeTrip = function (id) {
+      const t = DB.getTrips().find(t => t.id === id);
+      if (!t) return;
+      t.status = 'Delivered';
+      DB.updateTrip(t);
+      toast('Trip marked as Delivered! 🚚', 'success');
+      renderDriverTrips(document.getElementById('drv-sub'));
     };
 
     function renderMgtBrokers(div) {
@@ -1981,7 +2017,7 @@
               targetTab = user.role;
             }
           }
-        } catch (e) {}
+        } catch (e) { }
         switchTab(targetTab);
       } catch (err) {
         console.error(err);
